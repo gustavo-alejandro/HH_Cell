@@ -94,7 +94,7 @@ class BathGUI:
         return Equil_potential
 
     def create_widgets(self):
-        attributes_frame = ttk.LabelFrame(self.root, text="Attributes")
+        attributes_frame = ttk.LabelFrame(self.root, text="Bath composition %w")
         attributes_frame.grid(row=1, column=0, columnspan=3, padx=10, pady=10, sticky="w")
 
         attributes_labels = ['w_Al2O3', 'w_AlF3', 'w_CaF2', 'w_MgF2', 'w_KF', 'w_LiF', 'Bath Temperature (K)']
@@ -104,15 +104,15 @@ class BathGUI:
 
         for idx, label in enumerate(attributes_labels):
             ttk.Label(attributes_frame, text=label).grid(row=idx, column=0, padx=5, pady=5)
-            ttk.Scale(attributes_frame, variable=attributes_vars[idx], from_=slider_ranges[idx][0], to=slider_ranges[idx][1], length=200, orient="horizontal").grid(row=idx, column=1, padx=5, pady=5)
+            ttk.Scale(attributes_frame, variable=attributes_vars[idx], from_=slider_ranges[idx][0], to=slider_ranges[idx][1], length=50, orient="horizontal").grid(row=idx, column=1, padx=5, pady=5)
             ttk.Label(attributes_frame, textvariable=attributes_vars[idx]).grid(row=idx, column=2, padx=5, pady=5)
 
         # Display boxes for bath conductivity, bath resistivity, Al2O3_solub_A_factor, Al2O3_solub_B_factor, Al2O3_sat, Al2O3_rel_sat, and Equil_potential
         conductivity_frame = ttk.LabelFrame(self.root, text="Bath Conductivity")
-        conductivity_frame.grid(row=2, column=0, padx=10, pady=10, sticky="w")
+        conductivity_frame.grid(row=1, column=2, padx=10, pady=10, sticky="w")
 
         self.conductivity_label = ttk.Label(conductivity_frame, text="Bath Conductivity: ")
-        self.conductivity_label.grid(row=0, column=0, padx=5, pady=5)
+        self.conductivity_label.grid(row=0, column=2, padx=5, pady=5)
 
         resistivity_frame = ttk.LabelFrame(self.root, text="Bath Resistivity")
         resistivity_frame.grid(row=2, column=1, padx=10, pady=10, sticky="w")
@@ -144,10 +144,10 @@ class BathGUI:
         self.Al2O3_rel_sat_label = ttk.Label(Al2O3_rel_sat_frame, text="Al2O3_rel_sat: ")
         self.Al2O3_rel_sat_label.grid(row=0, column=0, padx=5, pady=5)
 
-        Equil_potential_frame = ttk.LabelFrame(self.root, text="Equil_potential")
-        Equil_potential_frame.grid(row=4, column=0, padx=10, pady=10, sticky="w")
+        Equil_potential_frame = ttk.LabelFrame(self.root, text="Eq. potential")
+        Equil_potential_frame.grid(row=0, column=2, padx=5, pady=10, sticky="w")
 
-        self.Equil_potential_label = ttk.Label(Equil_potential_frame, text="Equil_potential: ")
+        self.Equil_potential_label = ttk.Label(Equil_potential_frame, text="E: ")
         self.Equil_potential_label.grid(row=0, column=0, padx=5, pady=5)
 
         ttk.Button(self.root, text="Calculate", command=self.update_results).grid(row=5, column=0, columnspan=3, padx=10, pady=10)
@@ -167,7 +167,7 @@ class BathGUI:
         self.solub_B_label.config(text=f"Al2O3_solub_B_factor: {solub_B:.4f}")
         self.Al2O3_sat_label.config(text=f"Al2O3_sat: {Al2O3_sat:.4f}")
         self.Al2O3_rel_sat_label.config(text=f"Al2O3_rel_sat: {Al2O3_rel_sat:.4f}")
-        self.Equil_potential_label.config(text=f"Equil_potential: {Equil_potential:.4f}")
+        self.Equil_potential_label.config(text=f"E: {Equil_potential:.4f} V")
 
 if __name__ == "__main__":
     root = tk.Tk()
