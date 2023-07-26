@@ -108,7 +108,7 @@ class BathGUI:
 
         for idx, label in enumerate(attributes_labels):
             ttk.Label(attributes_frame, text=label).grid(row=idx, column=0, padx=5, pady=5)
-            ttk.Scale(attributes_frame, variable=attributes_vars[idx], from_=slider_ranges[idx][0], to=slider_ranges[idx][1], length=200, orient="horizontal").grid(row=idx, column=1, padx=5, pady=5)
+            ttk.Scale(attributes_frame, variable=attributes_vars[idx], from_=slider_ranges[idx][0], to=slider_ranges[idx][1], length=50, orient="horizontal").grid(row=idx, column=1, padx=5, pady=5)
             ttk.Label(attributes_frame, textvariable=attributes_vars[idx]).grid(row=idx, column=2, padx=5, pady=5)
 
         # Display boxes for bath conductivity, bath resistivity, Al2O3_solub_A_factor, Al2O3_solub_B_factor, Al2O3_sat, Al2O3_rel_sat, and Equil_potential
@@ -154,7 +154,7 @@ class BathGUI:
         self.Equil_potential_label = ttk.Label(Equil_potential_frame, text="Equil_potential: ")
         self.Equil_potential_label.grid(row=0, column=0, padx=5, pady=5)
 
-        ttk.Button(self.root, text="Calculate", command=self.update_results).grid(row=5, column=0, columnspan=3, padx=10, pady=10)
+        #ttk.Button(self.root, text="Calculate", command=self.update_results).grid(row=5, column=0, columnspan=3, padx=10, pady=10)
 
         bath_ratio_frame = ttk.LabelFrame(self.root, text="bath ratio")
         bath_ratio_frame.grid(row=4, column=1, padx=10, pady=10, sticky="w")
@@ -162,7 +162,7 @@ class BathGUI:
         self.bath_ratio_label = ttk.Label(bath_ratio_frame, text="bath_ratio: ")
         self.bath_ratio_label.grid(row=0, column=0, padx=5, pady=5)
 
-        ttk.Button(self.root, text="Calculate", command=self.update_results).grid(row=5, column=0, columnspan=3,
+        ttk.Button(self.root, text="Calculate", command=self.update_results).grid(row=4, column=3, columnspan=3,
                                                                                   padx=10, pady=10)
 
     def update_results(self):
