@@ -24,6 +24,12 @@ class Bath:
         self.bath_temp_K.set(bath_temp_K)
 
     def bath_conductivity(self):
+        """
+        Cryolite bath electrical conductivity as function of temperature and chemical composition, assuming only
+        species are Al2O3, AlF3, CaF2, MgF2, KF, LiF, each species input in wt%, temperature in K.
+        Using electrical conductivity empirical equation from https://doi.org/10.1007/BF02915051
+        :return: bath conductivity in 1/ohm
+        """
         # Calculate the bath conductivity using the provided equation
         bath_conductivity = math.exp(1.977 - 0.02 * self.w_Al2O3.get() - 0.0131 * self.w_AlF3.get() - 0.006 * self.w_CaF2.get() - 0.0106 * self.w_MgF2.get() - 0.0019 * self.w_KF.get() + 0.0121 * self.w_LiF.get() - 1204.3 / self.bath_temp_K.get())
         return bath_conductivity
@@ -56,6 +62,11 @@ class Bath:
         return Al2O3_rel_sat
 
     def Equil_potential(self):
+        """
+        This function calculates the equilibrium potential using equation (5) from  https://doi.org/10.1007/978-3-319-48156-2_21
+
+        :return: Equilibium potential in volts
+        """
         # Calculate Equil_potential using the provided equation
         bath_temp_K = self.bath_temp_K.get()
         Al2O3_rel_sat = self.Al2O3_rel_sat()
@@ -63,8 +74,34 @@ class Bath:
         return Equil_potential
 
     def bath_ratio(self):
+        """
+        The ratio NaF/AlF3 is called the cryolite ratio and it is 3 in pure cryolite (Na3AlF6)
+        Cryolite is dissociated to sodium fluoride and aliminum fluoride Na3AlF6 = 3 NaF + AlF3 https://doi.org/10.1021/j100830a023
+        mole ratio (NaF/AlF3) of dissociated cryolite is 3.0
+        Molecular weight of sodium fluoride 3*NaF = 3*(22.99g/mol Na + 18.99 g/mol fluoride) = 3*42g/mol
+        Molecular weight of Aluminium fluoride AlF3 = 26.98g/mol Al + 3x18.99 g/mol fluoride = 84 g/mol
+        Weight ratio 1.5
+        Bath composition wt% = %CaF2 + %xAlF3 + %Al2O3 + 3NaF*AlF3
+        Equation for bath ratio derived from https://doi.org/10.1007/978-3-319-48156-2_118
+        :return:
+        """
         # Calculate the bath ratio using the provided equation
         return (1.5 * (100 - self.w_CaF2.get() - self.w_Al2O3.get() - self.w_AlF3.get())) / ((100 - self.w_CaF2.get() - self.w_Al2O3.get()) + (1.5 * self.w_AlF3.get()))
+
+
+class Anode:
+    #initialize attributes
+    def __init__(self):
+        # Initialize attribute values
+        self.length = tk.DoubleVar(value=1600)
+        self.width = tk.DoubleVar(value=800)
+        self.height = tk.DoubleVar(value=600)
+
+    def bot_surface_area(self):
+        self.area = self.length * self.width
+        return self.area
+
+
 
 class CellGUI:
     def __init__(self, root):
@@ -127,6 +164,9 @@ class CellGUI:
 
         self.bath_ratio_label = ttk.Label(bath_ratio_frame, text="bath_ratio: ")
         self.bath_ratio_label.grid(row=0, column=0, padx=5, pady=5)
+
+        Anode_frame = ttk.LabelFrame(self.root, text="Anode dimensions")
+        Anode_frame.grid(row=2, column=3, padx=10, pady=10, sticky="w")
 
         ttk.Button(self.root, text="Calculate", command=self.update_results).grid(row=3, column=0, columnspan=3, padx=10, pady=10)
 
