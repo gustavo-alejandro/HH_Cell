@@ -35,7 +35,7 @@ class CellGUI:
             self.bath.w_Al2O3, self.bath.w_AlF3, self.bath.w_CaF2,
             self.bath.w_MgF2, self.bath.w_KF, self.bath.w_LiF, self.bath.bath_temp_K
         ]
-        slider_ranges = [(0, 10), (0, 10), (0, 10), (0, 10), (0, 10), (0, 10), (1050, 1300)]
+        slider_ranges = [(0, 11), (0, 11), (0, 11), (0, 11), (0, 11), (0, 11), (1050, 1400)]
 
         for idx, label in enumerate(attributes_labels):
             ttk.Label(attributes_frame, text=label, width=10).grid(row=idx, column=0, padx=5, pady=5)
@@ -49,22 +49,28 @@ class CellGUI:
             ttk.Label(attributes_frame, textvariable=attributes_vars[idx], width=4).grid(row=idx, column=2, padx=5, pady=5)
 
         resistivity_frame = ttk.LabelFrame(self.root, text="Bath Resistivity")
-        resistivity_frame.grid(row=3, column=5, padx=10, pady=10, sticky="w")
+        resistivity_frame.grid(row=4, column=5, padx=10, pady=10, sticky="w")
 
         self.resistivity_label = ttk.Label(resistivity_frame, text="Bath Resistivity: ")
         self.resistivity_label.grid(row=0, column=0, padx=5, pady=5)
 
         Equil_potential_frame = ttk.LabelFrame(self.root, text="Equil_potential")
-        Equil_potential_frame.grid(row=1, column=5, padx=10, pady=10, sticky="w")
+        Equil_potential_frame.grid(row=1, column=5, padx=10, pady=10, sticky="nw")
 
         self.Equil_potential_label = ttk.Label(Equil_potential_frame, text="Equil_potential: ")
         self.Equil_potential_label.grid(row=3, column=5, padx=5, pady=5)
 
         bath_ratio_frame = ttk.LabelFrame(self.root, text="bath ratio")
-        bath_ratio_frame.grid(row=2, column=5, padx=10, pady=10, sticky="w")
+        bath_ratio_frame.grid(row=2, column=5, padx=10, pady=10, sticky="nw")
 
         self.bath_ratio_label = ttk.Label(bath_ratio_frame, text="bath_ratio: ")
         self.bath_ratio_label.grid(row=0, column=0, padx=5, pady=5)
+
+        rx_current_limit_frame = ttk.LabelFrame(self.root, text="rx current limit")
+        rx_current_limit_frame.grid(row=3, column=5, padx=10, pady=10, sticky="nw")
+
+        self.rx_current_limit_label = ttk.Label(rx_current_limit_frame, text="rx current limit: ")
+        self.rx_current_limit_label.grid(row=0, column=0, padx=5, pady=5)
 
         # Anode attributes input GUI
 
@@ -103,6 +109,10 @@ class CellGUI:
         depth_imm_entry = ttk.Entry(anode_frame, textvariable=self.anode.depth_immers, width=5)
         depth_imm_entry.grid(row=7, column=1, padx=5, pady=5)
 
+        ttk.Label(anode_frame, text="bake temp", width=6).grid(row=8, column=0, padx=5, pady=5)
+        bake_temp_entry = ttk.Entry(anode_frame, textvariable=self.anode.bake_temp, width=5)
+        bake_temp_entry.grid(row=8, column=1, padx=5, pady=5)
+
         # Anode spacing input GUI
 
         anode_frame = ttk.LabelFrame(self.root, text="Anode spacing")
@@ -133,8 +143,14 @@ class CellGUI:
         self.bath_eff_area_field_gui = ttk.Label(anode_calc_frame, text="Bath eff area:     cm2")
         self.bath_eff_area_field_gui.grid(row=0, column=0, padx=5, pady=5, sticky="nw")
 
-        self.current_density_field_gui = ttk.Label(anode_calc_frame, text="Current density:    A/cm2 ")
+        self.current_density_field_gui = ttk.Label(anode_calc_frame, text="Current density:    A/cm2")
         self.current_density_field_gui.grid(row=1, column=0, padx=5, pady=5, sticky="nw")
+
+        self.surface_overvolt_field_gui = ttk.Label(anode_calc_frame, text="surf overvolt:    V")
+        self.surface_overvolt_field_gui.grid(row=2, column=0, padx=5, pady=5, sticky="nw")
+
+        self.concentration_overvolt_field_gui = ttk.Label(anode_calc_frame, text="conc overvolt:    V")
+        self.concentration_overvolt_field_gui.grid(row=3, column=0, padx=5, pady=5, sticky="nw")
 
         #Cell input frame GUI
 
@@ -187,27 +203,26 @@ class CellGUI:
             self.bath_ratio_label.config(text="error")
 
         try:
-            # Get the user input values for anode attributes
-            # length = self.anode.length_new.get()
-            # width = self.anode.width_new.get()
-            # height = self.anode.height.get()
-            # age = self.anode.age.get()
-            n_anodes = self.anode.n_anodes.get()
-            #
-            # # Update the anode object's attributes with the new values
-            # self.anode.length_new.set(length)
-            # self.anode.width_new.set(width)
-            # self.anode.height.set(height)
-            # self.anode.age.set(age)
+            rx_current_limit = self.bath.rx_limited_current_density()
+            self.rx_current_limit_label.config(text=f"rx limit: {rx_current_limit:.4f}")
+        except Exception as e:
+            print(f"Error calculating rx current limit: {e}")
+            self.rx_current_limit_label.config(text="error")
 
-            # Calculate and display bot_anode_surface
+        try:
+
+            n_anodes = self.anode.n_anodes.get()
             ACD = self.cell.ACD.get()
             bot_anode_surface = self.anode.bath_eff_area(ACD)
             self.bath_eff_area_field_gui.config(text=f"Bath eff area: {bot_anode_surface:.2f} cm2")
-            # Calculate current_intensity using bot_anode_surface and a constant current
-            current = self.cell.current.get()  # You can replace this value with the desired current intensity
+            current = self.cell.current.get()
             current_intensity = self.anode.current_intensity(current, n_anodes, ACD)
+            surface_overvolt = self.anode.surface_overvoltage(current, n_anodes, ACD)
+            conc_overvolt = self.anode.concentration_limit_current_density(current, n_anodes, ACD)
             self.current_density_field_gui.config(text=f"Current intensity: {current_intensity:.2f} A/cm2")
+            self.surface_overvolt_field_gui.config(text=f"Surf overvolt: {surface_overvolt:.2f} V")
+            self.concentration_overvolt_field_gui.config(text=f"Conc overvolt: {conc_overvolt:.2f} V")
+
         except Exception as e:
             print(f"Error calculating anode attributes: {e}")
             self.bath_eff_area_field_gui.config(text="error")

@@ -18,6 +18,7 @@ class Bath:
         self.w_KF = tk.DoubleVar(value=0.1)
         self.w_LiF = tk.DoubleVar(value=0.0)
         self.bath_temp_K = tk.DoubleVar(value=964 + 273.15)
+        self.w_Al2O3_ae = 1
 
     def update_attributes(self, w_Al2O3, w_AlF3, w_CaF2, w_MgF2, w_KF, w_LiF, bath_temp_K):
         # Update the attribute values with the new values passed from the GUI
@@ -98,8 +99,19 @@ class Bath:
         :return:
         """
         # Calculate the bath ratio using the provided equation
-        return (1.5 * (100 - self.w_CaF2.get() - self.w_Al2O3.get() - self.w_AlF3.get())) / (
+        bath_ratio = (1.5 * (100 - self.w_CaF2.get() - self.w_Al2O3.get() - self.w_AlF3.get())) / (
                     (100 - self.w_CaF2.get() - self.w_Al2O3.get()) + (1.5 * self.w_AlF3.get()))
+        return bath_ratio
+    def rx_limited_current_density(self):
+        """
+        From paper titled 'Haupin, W. Interpreting the components of cell voltage'
+        Eq. 25
+        https://doi.org/10.1007/978-3-319-48156-2_21
+        :return:
+        """
+        rx_limited_current_density = math.exp(0.56 * math.log(self.w_Al2O3.get() + self.w_LiF.get() / 4) + 0.276 * (self.bath_ratio()*2 - 1.5) - 5.849)
+        print(f"Al2O3: {self.w_Al2O3.get()}, {self.w_LiF.get()}, {self.bath_ratio()*2}")
+        return rx_limited_current_density
 
 class Anode:
 
@@ -117,6 +129,7 @@ class Anode:
         self.S_2 = tk.DoubleVar(value=6) # Distance between anode short sidewalls 2 (cm)
         self.S_3 = tk.DoubleVar(value=12) # Distance between anode long sidewalls 3 (cm)
         self.S_4 = tk.DoubleVar(value=6) # Distance anode-wall 4 (cm)
+        self.bake_temp = tk.DoubleVar(value=1000) # Anode baking temperature [K]
 
     def fanning_factor(self, ACD, S_i):
         """
@@ -159,3 +172,37 @@ class Anode:
         bot_anode_surface = self.bath_eff_area(ACD)
         current_intensity = (current*1000) / bot_anode_surface / n_anodes
         return current_intensity
+    def surface_overvoltage(self, current, n_anodes, ACD):
+        """
+        This equation is valid only for current densities higher than 0.01 A/cm2
+        From paper titled 'Haupin, W. Interpreting the components of cell voltage'
+        Eq. 26
+        https://doi.org/10.1007/978-3-319-48156-2_21
+        :param current:
+        :param n_anodes:
+        :param ACD:
+        :return:
+        """
+        bath = Bath()
+        rx_limit_current = bath.rx_limited_current_density()
+        surf_overvolt = 1.142e-5 * math.log(self.bake_temp.get()) * bath.bath_temp_K.get() * math.log(self.current_intensity(current, n_anodes, ACD)/rx_limit_current)
+        #surf_overvolt = 1
+        print(f"surface overvoltage is {surf_overvolt}")
+        return surf_overvolt
+    def concentration_limit_current_density(self, current, n_anodes, ACD):
+        """
+        Parameter names from original equation:
+        Tb: Bath temperature [C]
+        From paper titled 'Haupin, W. Interpreting the components of cell voltage'
+        Eq. 19
+
+        https://doi.org/10.1007/978-3-319-48156-2_21
+        :return:
+        """
+        bath = Bath()
+        A_n = self.length_new.get()*.1 * self.width_new.get()*.1
+        C_a = 1.443 - 1.985 * bath.bath_ratio()*2 + 1.131 * pow(bath.bath_ratio()*2, 2)
+        C_b = 0.4122 - 0.2037 * bath.bath_ratio()
+        D_sn = self.current_intensity(current, n_anodes, ACD) / ((0.00464 * (bath.bath_temp_K.get()-273.15) - 3.4544) * (C_a * bath.w_Al2O3_ae))
+        i_c = (0.00464 * (bath.bath_temp_K.get()-273.15) - 3.454) * (C_a * bath.w_Al2O3.get() + C_b * pow(bath.w_Al2O3.get(), 2))*pow(A_n, -0.1)*1
+        return i_c
