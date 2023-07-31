@@ -2,6 +2,14 @@ import tkinter as tk
 import math
 from statistics import mean
 
+"""
+Constants
+"""
+n_e = 1.6022e-19 #Electron charge
+N_a = 6.022e23 # Avogadro's number of particles in 1 mole
+F = n_e * N_a # Faraday constant
+R = 8.314 #Universal gas constant J/ K mol
+
 class Cell_input:
     def __init__(self):
         # Initialize attribute values
@@ -129,7 +137,7 @@ class Anode:
         self.S_2 = tk.DoubleVar(value=6) # Distance between anode short sidewalls 2 (cm)
         self.S_3 = tk.DoubleVar(value=12) # Distance between anode long sidewalls 3 (cm)
         self.S_4 = tk.DoubleVar(value=6) # Distance anode-wall 4 (cm)
-        self.bake_temp = tk.DoubleVar(value=1000) # Anode baking temperature [K]
+        self.bake_temp = tk.DoubleVar(value=1100) # Anode baking temperature [C]
 
     def fanning_factor(self, ACD, S_i):
         """
@@ -185,24 +193,70 @@ class Anode:
         """
         bath = Bath()
         rx_limit_current = bath.rx_limited_current_density()
-        surf_overvolt = 1.142e-5 * math.log(self.bake_temp.get()) * bath.bath_temp_K.get() * math.log(self.current_intensity(current, n_anodes, ACD)/rx_limit_current)
+        T_bath_K = bath.bath_temp_K.get()
+        surf_overvolt = 1.142e-5 * math.log(self.bake_temp.get()+273.15) * T_bath_K * math.log(self.current_intensity(current, n_anodes, ACD)/rx_limit_current)
         #surf_overvolt = 1
         print(f"surface overvoltage is {surf_overvolt}")
         return surf_overvolt
-    def concentration_limit_current_density(self, current, n_anodes, ACD):
+    def concentration_limit_current_density_Haupin(self, current, n_anodes, ACD):
         """
         Parameter names from original equation:
         Tb: Bath temperature [C]
+        Ca: empirical coefficient
+        Cb: empirical coefficient
+        Aan: Cross sectional area of a single anode [cm2]
+        Rb: NaF/AlF3 ratio (cryolite ratio)
+        i: Current density A/cm2
+        Dsn: Cell design factor. Compensates for different cells at the same current density having anode effects at\
+             different alumina concentrations
         From paper titled 'Haupin, W. Interpreting the components of cell voltage'
         Eq. 19
-
         https://doi.org/10.1007/978-3-319-48156-2_21
+        Alternate equation from GRJOTHEIM, Kai; WELCH, Barry J. Aluminium Smelter Technology--a Pure and Applied Approach.
+        Aluminium-Verlag, P. O. Box 1207, Konigsallee 30, D 4000 Dusseldorf 1, FRG, 1988., 1988.
+        Chapter 5, Equation 13.
         :return:
         """
         bath = Bath()
+        i = self.current_intensity(current, n_anodes, ACD)
+        A_e_O_r = bath.w_Al2O3_ae
+        print(f"Tne alumina concentration at anode effect is {A_e_O_r}")
+        T_b_K = bath.bath_temp_K.get()
+        T_b_C = (bath.bath_temp_K.get() - 273.15)
+        T = bath.bath_temp_K.get()
+        R_b = bath.bath_ratio()*2
         A_n = self.length_new.get()*.1 * self.width_new.get()*.1
-        C_a = 1.443 - 1.985 * bath.bath_ratio()*2 + 1.131 * pow(bath.bath_ratio()*2, 2)
-        C_b = 0.4122 - 0.2037 * bath.bath_ratio()
-        D_sn = self.current_intensity(current, n_anodes, ACD) / ((0.00464 * (bath.bath_temp_K.get()-273.15) - 3.4544) * (C_a * bath.w_Al2O3_ae))
-        i_c = (0.00464 * (bath.bath_temp_K.get()-273.15) - 3.454) * (C_a * bath.w_Al2O3.get() + C_b * pow(bath.w_Al2O3.get(), 2))*pow(A_n, -0.1)*1
+        print(f"the cross sectional area of a single anode is {A_n}")
+        C_a = 1.443 - 1.985 * R_b + 1.131 * pow(R_b, 2)
+        C_b = 0.4122 - 0.2037 * R_b
+        D_sn = i / (((0.00464 * T_b_C - 3.4544) * ((C_a * A_e_O_r) + C_b * pow(A_e_O_r, 2))) * pow(A_n, -0.1))
+
+        #'Haupin, W. Interpreting the components of cell voltage'
+        #Eq.19
+        #https: // doi.org / 10.1007 / 978 - 3 - 319 - 48156 - 2_21
+        #i_c = (0.00464 * T_b_C - 3.454) * (C_a * bath.w_Al2O3.get() + C_b * pow(bath.w_Al2O3.get(), 2))*pow(A_n, -0.1)*D_sn
+        i_c = (5.5+0.018*(T_b_K - 1323)) * pow((A_n * n_anodes), -0.1)*(-0.4+pow(bath.w_Al2O3.get(), 0.5))
+        #conc_overvolt = (T / 23210) * math.log(i_c/(i_c - i))
+        print(f"The concentration limited current density is {i_c} A/cm2")
         return i_c
+    def concentration_limit_current_density(self, n_anodes):
+        """
+        Alternate equation from GRJOTHEIM, Kai; WELCH, Barry J. Aluminium Smelter Technology--a Pure and Applied Approach.
+        Aluminium-Verlag, P. O. Box 1207, Konigsallee 30, D 4000 Dusseldorf 1, FRG, 1988., 1988.
+        Chapter 5, Equation 13.
+        :return:
+        """
+        bath = Bath()
+        T_b_K = bath.bath_temp_K.get()
+        A_n = self.length_new.get()*.1 * self.width_new.get()*.1
+        i_c = (5.5+0.018*(T_b_K - 1323)) * pow((A_n * n_anodes), -0.1)*(-0.4+pow(bath.w_Al2O3.get(), 0.5))
+        print(f"The concentration limited current density is {i_c} A/cm2")
+        return i_c
+    def concentration_overvolt(self, current, n_anodes, ACD):
+        bath = Bath()
+        i_a = self.current_intensity(current, n_anodes, ACD)
+        i_c = self.concentration_limit_current_density(n_anodes)
+        T_b_K = bath.bath_temp_K.get()
+        conc_overvolt = ((R * T_b_K) / (2 * F)) * math.log(i_c/(i_c-i_a))
+        print(f"The concentration overvolt is {conc_overvolt} A/cm2")
+        return conc_overvolt

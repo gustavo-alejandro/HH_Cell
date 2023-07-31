@@ -146,11 +146,14 @@ class CellGUI:
         self.current_density_field_gui = ttk.Label(anode_calc_frame, text="Current density:    A/cm2")
         self.current_density_field_gui.grid(row=1, column=0, padx=5, pady=5, sticky="nw")
 
+        self.critical_current_density_field_gui = ttk.Label(anode_calc_frame, text="Critical current density:    A/cm2")
+        self.critical_current_density_field_gui.grid(row=2, column=0, padx=5, pady=5, sticky="nw")
+
         self.surface_overvolt_field_gui = ttk.Label(anode_calc_frame, text="surf overvolt:    V")
-        self.surface_overvolt_field_gui.grid(row=2, column=0, padx=5, pady=5, sticky="nw")
+        self.surface_overvolt_field_gui.grid(row=3, column=0, padx=5, pady=5, sticky="nw")
 
         self.concentration_overvolt_field_gui = ttk.Label(anode_calc_frame, text="conc overvolt:    V")
-        self.concentration_overvolt_field_gui.grid(row=3, column=0, padx=5, pady=5, sticky="nw")
+        self.concentration_overvolt_field_gui.grid(row=4, column=0, padx=5, pady=5, sticky="nw")
 
         #Cell input frame GUI
 
@@ -217,11 +220,13 @@ class CellGUI:
             self.bath_eff_area_field_gui.config(text=f"Bath eff area: {bot_anode_surface:.2f} cm2")
             current = self.cell.current.get()
             current_intensity = self.anode.current_intensity(current, n_anodes, ACD)
+            critical_current_intensity = self.anode.concentration_limit_current_density(n_anodes)
             surface_overvolt = self.anode.surface_overvoltage(current, n_anodes, ACD)
-            conc_overvolt = self.anode.concentration_limit_current_density(current, n_anodes, ACD)
-            self.current_density_field_gui.config(text=f"Current intensity: {current_intensity:.2f} A/cm2")
+            conc_overvolt = self.anode.concentration_overvolt(current, n_anodes, ACD)
+            self.current_density_field_gui.config(text=f"Current density: {current_intensity:.2f} A/cm2")
             self.surface_overvolt_field_gui.config(text=f"Surf overvolt: {surface_overvolt:.2f} V")
             self.concentration_overvolt_field_gui.config(text=f"Conc overvolt: {conc_overvolt:.2f} V")
+            self.critical_current_density_field_gui.config(text=f"Critical current density: {critical_current_intensity:.2f} A/cm2")
 
         except Exception as e:
             print(f"Error calculating anode attributes: {e}")
@@ -230,5 +235,6 @@ class CellGUI:
 
 if __name__ == "__main__":
     root = tk.Tk()
+    print(f"Faraday: {F}")
     cell_gui = CellGUI(root)
     root.mainloop()
