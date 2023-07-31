@@ -9,6 +9,7 @@ class CellGUI:
         # Initialize the bath object and anode object
         self.bath = Bath()
         self.anode = Anode()
+        self.anode_assembly = Anode_assembly()
         self.cell = Cell_input()
 
         # Load and display the image
@@ -170,6 +171,20 @@ class CellGUI:
 
         ttk.Button(self.root, text="Calculate", command=self.update_results).grid(row=5, column=0, columnspan=3, padx=10, pady=10)
 
+        # Components of cell voltage
+
+        volt_table = ttk.LabelFrame(self.root, text="Components of cell voltage")
+        volt_table.grid(row=0, column=8, padx=5, pady=10, sticky="nw")
+
+        self.volt_table_field_Eq_pot_gui = ttk.Label(volt_table, text="Equilibrium potential:     V")
+        self.volt_table_field_Eq_pot_gui.grid(row=0, column=0, padx=5, pady=5, sticky="nw")
+
+        self.volt_table_surf_overvolt_gui = ttk.Label(volt_table, text="Surf overvolt:     V")
+        self.volt_table_surf_overvolt_gui.grid(row=1, column=0, padx=5, pady=5, sticky="nw")
+
+        self.volt_table_conc_overvolt_gui = ttk.Label(volt_table, text="Conc overvolt:     V")
+        self.volt_table_conc_overvolt_gui.grid(row=2, column=0, padx=5, pady=5, sticky="nw")
+
     def on_slider_release(self, event):
         # Update the bath attributes with the new values from the sliders
         self.bath.update_attributes(
@@ -185,6 +200,17 @@ class CellGUI:
     def update_results(self):
         # Rest of the code remains unchanged
         try:
+            self.anode.update_attributes(
+                self.anode.length_new.get(),
+                self.anode.width_new.get(),
+                self.anode.height.get(),
+                self.anode.depth_immers.get(),
+                self.anode.n_anodes.get()
+            )
+        except:
+            print("error updating anode")
+
+        try:
             resistivity = self.bath.bath_resistivity()
             self.resistivity_label.config(text=f"Bath Resistivity: {resistivity:.4f}")
         except Exception as e:
@@ -194,6 +220,7 @@ class CellGUI:
         try:
             Equil_potential = self.bath.Equil_potential()
             self.Equil_potential_label.config(text=f"Equil_potential: {Equil_potential:.4f}")
+            self.volt_table_field_Eq_pot_gui.config(text=f"Equil_potential: {Equil_potential:.4f}")
         except Exception as e:
             print(f"Error calculating Equil_potential: {e}")
             self.Equil_potential_label.config(text="error")
@@ -206,8 +233,15 @@ class CellGUI:
             self.bath_ratio_label.config(text="error")
 
         try:
+            n_anodes = self.anode.n_anodes.get()
+            ACD = self.cell.ACD.get()
+            current = self.cell.current.get()
+            T_bath_K=self.bath.bath_temp_K.get()
             rx_current_limit = self.bath.rx_limited_current_density()
+            surface_overvolt = self.anode.surface_overvoltage(current, n_anodes, ACD,T_bath_K, rx_current_limit)
             self.rx_current_limit_label.config(text=f"rx limit: {rx_current_limit:.4f}")
+            self.volt_table_surf_overvolt_gui.config(text=f"Surface overvolt: {surface_overvolt:.4f}")
+            self.surface_overvolt_field_gui.config(text=f"Surf overvolt: {surface_overvolt:.2f} V")
         except Exception as e:
             print(f"Error calculating rx current limit: {e}")
             self.rx_current_limit_label.config(text="error")
@@ -219,22 +253,36 @@ class CellGUI:
             bot_anode_surface = self.anode.bath_eff_area(ACD)
             self.bath_eff_area_field_gui.config(text=f"Bath eff area: {bot_anode_surface:.2f} cm2")
             current = self.cell.current.get()
+            T_b_K = self.bath.bath_temp_K.get()
+            length = self.anode.length_new.get()
+            width = self.anode.width_new.get()
+            w_Al2O3 = self.bath.w_Al2O3.get()
             current_intensity = self.anode.current_intensity(current, n_anodes, ACD)
-            critical_current_intensity = self.anode.concentration_limit_current_density(n_anodes)
-            surface_overvolt = self.anode.surface_overvoltage(current, n_anodes, ACD)
-            conc_overvolt = self.anode.concentration_overvolt(current, n_anodes, ACD)
+            critical_current_intensity = self.anode.concentration_limit_current_density(n_anodes, length, width, T_b_K, w_Al2O3)
+            anode_assy_v_drop = self.anode_assembly.voltage_drop(current)
+            print(anode_assy_v_drop)
+            #surface_overvolt = self.anode.surface_overvoltage(current, n_anodes, ACD)
+            conc_overvolt = self.anode.concentration_overvolt(current, n_anodes, ACD, length, width, T_b_K, w_Al2O3)
             self.current_density_field_gui.config(text=f"Current density: {current_intensity:.2f} A/cm2")
-            self.surface_overvolt_field_gui.config(text=f"Surf overvolt: {surface_overvolt:.2f} V")
+            #self.surface_overvolt_field_gui.config(text=f"Surf overvolt: {surface_overvolt:.2f} V")
             self.concentration_overvolt_field_gui.config(text=f"Conc overvolt: {conc_overvolt:.2f} V")
             self.critical_current_density_field_gui.config(text=f"Critical current density: {critical_current_intensity:.2f} A/cm2")
-
+            #self.volt_table_field_Eq_pot_gui.config(text=f"Equil_potential: {Equil_potential:.4f}")
+            #self.volt_table_surf_overvolt_gui.config(text=f"Surface overvolt: {surface_overvolt:.4f}")
+            self.volt_table_conc_overvolt_gui.config(text=f"Conc overvolt: {conc_overvolt:.4f}")
         except Exception as e:
             print(f"Error calculating anode attributes: {e}")
             self.bath_eff_area_field_gui.config(text="error")
             #self.current_intensity_label.config(text="error")
+        try:
+            print(f"Resistance table anode assembly:")
+            print(self.anode_assembly.resistance)
+        except:
+            print("Error anode assy")
 
 if __name__ == "__main__":
     root = tk.Tk()
     print(f"Faraday: {F}")
+
     cell_gui = CellGUI(root)
     root.mainloop()

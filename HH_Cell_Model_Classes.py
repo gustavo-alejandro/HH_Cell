@@ -1,6 +1,7 @@
 import tkinter as tk
 import math
 from statistics import mean
+import pandas as pd
 
 """
 Constants
@@ -87,11 +88,12 @@ class Bath:
 
         :return: Equilibium potential in volts
         """
-        # Calculate Equil_potential using the provided equation
+        #Calculate Equil_potential using the provided equation
         bath_temp_K = self.bath_temp_K.get()
         Al2O3_rel_sat = self.Al2O3_rel_sat()
         Equil_potential = 1.897 - 0.00056 * bath_temp_K + (8.314 * bath_temp_K) / (12 * 96485) * math.pow(
             math.log(1 / Al2O3_rel_sat), 2.77)
+        print(f"For equil potential calc I used: bath temp: {bath_temp_K}")
         return Equil_potential
 
     def bath_ratio(self):
@@ -139,6 +141,15 @@ class Anode:
         self.S_4 = tk.DoubleVar(value=6) # Distance anode-wall 4 (cm)
         self.bake_temp = tk.DoubleVar(value=1100) # Anode baking temperature [C]
 
+
+
+    def update_attributes(self, length_new, width_new, height, depth_immers, n_anodes):
+        # Update the attribute values with the new values passed from the GUI
+        self.length_new.set(length_new)
+        self.width_new.set(width_new)
+        self.height.set(height)
+        self.depth_immers.set(depth_immers)
+        self.n_anodes.set(n_anodes)
     def fanning_factor(self, ACD, S_i):
         """
         Parameter names from original equation:
@@ -180,7 +191,7 @@ class Anode:
         bot_anode_surface = self.bath_eff_area(ACD)
         current_intensity = (current*1000) / bot_anode_surface / n_anodes
         return current_intensity
-    def surface_overvoltage(self, current, n_anodes, ACD):
+    def surface_overvoltage(self, current, n_anodes, ACD, T_bath_K, rx_limit_current):
         """
         This equation is valid only for current densities higher than 0.01 A/cm2
         From paper titled 'Haupin, W. Interpreting the components of cell voltage'
@@ -191,9 +202,9 @@ class Anode:
         :param ACD:
         :return:
         """
-        bath = Bath()
-        rx_limit_current = bath.rx_limited_current_density()
-        T_bath_K = bath.bath_temp_K.get()
+        #bath = Bath()
+        #rx_limit_current = bath.rx_limited_current_density()
+        #T_bath_K = bath.bath_temp_K.get()
         surf_overvolt = 1.142e-5 * math.log(self.bake_temp.get()+273.15) * T_bath_K * math.log(self.current_intensity(current, n_anodes, ACD)/rx_limit_current)
         #surf_overvolt = 1
         print(f"surface overvoltage is {surf_overvolt}")
@@ -239,24 +250,32 @@ class Anode:
         #conc_overvolt = (T / 23210) * math.log(i_c/(i_c - i))
         print(f"The concentration limited current density is {i_c} A/cm2")
         return i_c
-    def concentration_limit_current_density(self, n_anodes):
+    def concentration_limit_current_density(self, n_anodes, length, width, T_b_K, w_Al2O3):
         """
         Alternate equation from GRJOTHEIM, Kai; WELCH, Barry J. Aluminium Smelter Technology--a Pure and Applied Approach.
         Aluminium-Verlag, P. O. Box 1207, Konigsallee 30, D 4000 Dusseldorf 1, FRG, 1988., 1988.
         Chapter 5, Equation 13.
         :return:
         """
-        bath = Bath()
-        T_b_K = bath.bath_temp_K.get()
-        A_n = self.length_new.get()*.1 * self.width_new.get()*.1
-        i_c = (5.5+0.018*(T_b_K - 1323)) * pow((A_n * n_anodes), -0.1)*(-0.4+pow(bath.w_Al2O3.get(), 0.5))
+        A_n = length*.1*width*.1
+        i_c = (5.5+0.018*(T_b_K - 1323)) * pow((A_n * n_anodes), -0.1)*(-0.4+pow(w_Al2O3, 0.5))
+
         print(f"The concentration limited current density is {i_c} A/cm2")
         return i_c
-    def concentration_overvolt(self, current, n_anodes, ACD):
-        bath = Bath()
+    def concentration_overvolt(self, current, n_anodes, ACD, length, width, T_b_K, w_Al2O3):
+        #bath = Bath()
         i_a = self.current_intensity(current, n_anodes, ACD)
-        i_c = self.concentration_limit_current_density(n_anodes)
-        T_b_K = bath.bath_temp_K.get()
+        i_c = self.concentration_limit_current_density(n_anodes, length, width, T_b_K, w_Al2O3)
+        #T_b_K = bath.bath_temp_K.get()
         conc_overvolt = ((R * T_b_K) / (2 * F)) * math.log(i_c/(i_c-i_a))
         print(f"The concentration overvolt is {conc_overvolt} A/cm2")
         return conc_overvolt
+
+class Anode_assembly:
+    def __init__(self):
+        self.resistance = pd.DataFrame(
+            {'riser': [8.1978e-8], 'flexibles': [8.1978e-8], 'anode bridge': [0], 'clamp': [4.28571e-8],
+             'anode rod': [3.95556e-8], 'yoke': [1.01087e-7], 'thimble': [0], 'anode block': [5.36087e-7]})#resistance values in ohm
+    def voltage_drop(self, cell_current):
+        v_drop = self.resistance.mul(cell_current)
+        return v_drop
